@@ -1,84 +1,43 @@
-# PM-01: Project Plan (แผนโครงการ)
-**Project Name:** Project Fenrir — Computer-Use Agent
+# PM-01: Project Plan — Fenrir
+**Project Name:** Fenrir — Computer-Use Agent
 **Document Version:** 1.0
-**Date:** 2026-03-07
+**Date:** 2026-03-12
 **Standard:** ISO/IEC 29110 — PM Process
 
 ---
 
-## 1. Project Scope & Objectives (ขอบเขตและวัตถุประสงค์)
+## 1. Project Scope & Objectives
 
 ### เป้าหมาย
-พัฒนา Computer-Use Agent ที่ควบคุม browser, shell, และ screen ผ่าน MCP protocol เพื่อให้ AI agents ใน Asgard ecosystem สามารถทำงานอัตโนมัติบนหน้าจอคอมพิวเตอร์ได้
-
-### ขอบเขต
-- **Browser Automation** — Navigate, click, type, screenshot, extract data
-- **Shell Execution** — Run commands, capture output, file management
-- **Screen Control** — Mouse/keyboard control, screen capture, OCR
-- **MCP Server** — Expose capabilities as MCP tools for Bifrost to call
-- **Safety Guardrails** — Sandboxed execution, command whitelist, confirmation prompts
+AI-powered computer-use agent ที่ทำ browser automation และ FHIR R4 integration สำหรับ clinic management systems โดยเฉพาะ Eir (OpenEMR) เป็น MCP server ให้ Bifrost เชื่อมต่อได้
 
 ### Tech Stack
 | Layer | Technology |
 |:--|:--|
-| Language | Rust |
-| Browser Engine | ZeroClaw (headless Chromium) |
-| Screen Control | CoreGraphics (macOS) / X11 (Linux) |
-| Protocol | MCP (Model Context Protocol) server |
-| Container | Docker |
-
-### Part of Asgard Ecosystem
-| Connection | Protocol | Description |
-|:--|:--|:--|
-| Bifrost → Fenrir | MCP | Tool calling (browser, shell, screen) |
-| Fenrir → Yggdrasil | OIDC | Authentication for restricted operations |
+| Runtime | Python 3.11+ |
+| Web framework | FastAPI + Uvicorn |
+| HTTP client | httpx (async) |
+| Browser engine | Browser Use + Playwright |
+| Config | pydantic-settings |
+| Testing | pytest + pytest-asyncio |
 
 ---
 
-## 2. Project Organization & Resources (โครงสร้างทีมและทรัพยากร)
+## 2. Sprint Schedule
 
-| Role | Person/Team |
+### Sprint 1: Foundation (Mar 12, 2026) — ✅ COMPLETED
+| Deliverable | Status |
 |:--|:--|
-| **Project Manager** | Paripol (MegaWiz) |
-| **Developer** | AI-assisted (Antigravity) |
-| **Contact** | paripol@megawiz.co |
-
----
-
-## 3. Project Schedule & Milestones (ตารางเวลาและจุดส่งมอบ)
-
-### Sprint 1: Browser Core (Target: 2026-07)
-- [ ] Rust project structure with Docker
-- [ ] Headless Chromium integration (ZeroClaw)
-- [ ] Navigate, click, type, screenshot functions
-- [ ] MCP server (expose browser tools)
-- [ ] Unit tests (10+ tests)
-
-### Sprint 2: Shell & Screen (Target: 2026-08)
-- [ ] Shell command execution (sandboxed)
-- [ ] File system operations (read/write/list)
-- [ ] Screen capture & OCR
-- [ ] Mouse/keyboard control
-- [ ] Safety guardrails (command whitelist)
-
-### Sprint 3: Integration (Target: 2026-09)
-- [ ] Bifrost MCP client integration test
-- [ ] Multi-step workflow execution
-- [ ] Error recovery & retry
-- [ ] Structured logging
-- [ ] E2E tests with Bifrost + Heimdall
-
----
-
-## 4. Risk Management (การจัดการความเสี่ยง)
-
-| Risk | Impact | Mitigation |
-|:--|:--|:--|
-| **Unsafe command execution** | Critical | Sandboxed environment; command whitelist; confirmation prompts |
-| **Browser automation detection** | Medium | Stealth mode; realistic timing |
-| **Screen resolution differences** | Low | Coordinate normalization; responsive selectors |
-| **Headless Chrome instability** | Medium | Crash recovery; session management |
-| **Docker container escape** | Critical | Minimal privileges; network isolation; seccomp profiles |
+| Project scaffold (pyproject.toml, package structure) | ✅ Done |
+| Config module (pydantic-settings) | ✅ Done |
+| Health endpoints (/healthz, /readyz) | ✅ Done |
+| MCP server (JSON-RPC 2.0, 5 tools) | ✅ Done |
+| FHIR R4 client (Patient CRUD + Observation) | ✅ Done |
+| FHIR models (Pydantic) | ✅ Done |
+| Browser Use agent (navigate, extract, fill, screenshot) | ✅ Done |
+| Task router (API vs Browser, Thai+EN keywords) | ✅ Done |
+| Localhost-only URL validation (security) | ✅ Done |
+| Tests | ✅ Done (35 passed, 0 failed) |
 
 ---
 

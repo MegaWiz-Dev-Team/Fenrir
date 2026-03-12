@@ -1,186 +1,129 @@
-# 🐺 Fenrir — Computer-Use Agent
+# 🐺 Fenrir — Computer Use Agent
 
-> *"The great wolf of immense power"*
->
-> Fenrir is a computer-use agent service that enables AI agents to control the Mac Mini — browsing the web, filling forms, extracting data, running shell commands, and automating workflows. Part of the [🏰 Asgard AI Platform](https://github.com/megacare-dev/Asgard).
+> *The great wolf — AI-powered browser automation and clinic system integration for the Asgard ecosystem*
 
-| Component | Link |
-|:--|:--|
-| 🏰 Asgard | [Ecosystem Overview](https://github.com/megacare-dev/Asgard) |
-| 🧠 Mimir | [RAG + Agent Builder](https://github.com/megacare-dev/Mimir) |
-| 🛡️ Heimdall | [LLM Gateway](https://github.com/megacare-dev/Heimdall) |
-| ⚡ Bifrost | [Agent Runtime](https://github.com/megacare-dev/Bifrost) |
-| 🐺 Fenrir | **This repo** |
+**Fenrir** is the computer-use component of the [Asgard AI Platform](https://github.com/megacare-dev/Asgard). It takes natural language commands and executes browser automation tasks, with a primary focus on **Eir (OpenEMR)** clinic management integration.
 
 ---
 
-## Overview
+## 🏗️ Architecture
 
-Fenrir provides **computer-use capabilities** as an MCP (Model Context Protocol) server. Bifrost (or any MCP-compatible client) can call Fenrir to interact with the physical machine.
+```mermaid
+graph TB
+    subgraph input["📩 Natural Language Input"]
+        Mimir["🧠 Mimir<br/>RAG + Agent"]
+        Bifrost["⚡ Bifrost<br/>Agent Runtime"]
+    end
 
-```
-Bifrost (Agent Runtime)
-    │
-    │ MCP Protocol
-    ▼
-Fenrir (Computer Use)
-    ├── 🌐 Browser Control (navigate, click, extract, screenshot)
-    ├── 💻 Shell Execution (run commands, scripts)
-    ├── 📁 File Management (read, write, search)
-    ├── 🖥️ Screen Capture (CGWindowListCreateImage)
-    └── ⌨️ Input Control (keyboard, mouse via CGEvent)
+    subgraph fenrir["🐺 Fenrir — MCP Server"]
+        Router["🔀 Task Router<br/>API-able? → FHIR<br/>UI-only? → Browser"]
+        FHIR["🏥 FHIR R4 Client<br/>Patient · Encounter · Observation"]
+        BrowserUse["🌐 Browser Use<br/>Playwright + LLM"]
+    end
+
+    subgraph target["🎯 Target Systems"]
+        OpenEMR["🏥 OpenEMR<br/>(localhost)"]
+        WebApps["🌐 Other Web Apps"]
+    end
+
+    Mimir --> Bifrost
+    Bifrost --> |"MCP"| Router
+    Router --> FHIR
+    Router --> BrowserUse
+    FHIR --> OpenEMR
+    BrowserUse --> OpenEMR
+    BrowserUse --> WebApps
+
+    style fenrir fill:#1c1917,stroke:#a8a29e,color:#e7e5e4
+    style input fill:transparent,stroke:#94a3b8
+    style target fill:transparent,stroke:#94a3b8
 ```
 
 ---
 
-## Architecture
+## 📦 Tech Stack
 
-Based on [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw) — a lightweight Rust agent runtime optimized for efficiency and security.
-
-### Why ZeroClaw?
-
-| Feature | ZeroClaw | OpenClaw |
+| Component | Technology | Purpose |
 |:--|:--|:--|
-| **Language** | **Rust** ✅ (matches Heimdall/Mimir) | Node.js |
-| **Memory** | **< 5MB RAM** | 1GB+ |
-| **Startup** | **Milliseconds** | Seconds |
-| **Security** | **Sandbox + allowlist** | Requires careful config |
-| **Binary size** | **~4MB** | Heavy |
+| **MCP Server** | Python (FastAPI) | Tool interface for Bifrost |
+| **Browser Automation** | [Browser Use](https://github.com/browser-use/browser-use) | Natural language → browser actions |
+| **Browser Engine** | Playwright | Headless/headed browser control |
+| **API Integration** | FHIR R4 Client (`fhirclient`) | Direct OpenEMR data operations |
+| **LLM Backend** | Heimdall Gateway | Local LLM inference (Ollama/MLX) |
 
-### Customizations from ZeroClaw
+---
 
-| Area | Change |
+## 🎯 Use Cases
+
+### Clinic Management (OpenEMR)
+
+| Task | Method | Example |
+|:--|:--|:--|
+| Register patient | **FHIR API** | "ลงทะเบียนคนไข้ใหม่ นายสมชาย อายุ 45 ปี" |
+| Record vitals | **FHIR API** | "บันทึก BP 120/80 HR 72 Temp 36.5" |
+| Create encounter | **FHIR API** | "สร้าง visit ใหม่สำหรับ HN 12345" |
+| Fill complex forms | **Browser Use** | "กรอกแบบฟอร์มส่งตัวผู้ป่วย" |
+| Generate reports | **Browser Use** | "พิมพ์ใบสรุปการรักษา" |
+
+### General Browser Automation
+
+- Web scraping and data extraction
+- Form filling across any web application
+- Automated testing and QA
+
+---
+
+## 🔒 Security
+
+> [!CAUTION]
+> **Patient data must never leave the local machine.**
+
+| Security Measure | Description |
 |:--|:--|
-| **LLM Provider** | → Heimdall API |
-| **Interface** | + MCP Server protocol |
-| **Browser** | + Playwright/Chromium |
-| **Screen** | + macOS Accessibility APIs |
-| **Security** | Tuned allowlists for our use cases |
+| **Localhost only** | Fenrir listens on `127.0.0.1:8200` only |
+| **Local LLM** | All inference via Heimdall → Ollama/MLX (no cloud API for patient data) |
+| **FHIR Auth** | OAuth2 + OpenID Connect for OpenEMR API |
+| **Sandbox** | Browser Use runs in isolated workspace |
+| **No external data** | Patient information never sent to external APIs |
 
 ---
 
-## MCP Tools
+## 🔧 Configuration
 
-Fenrir exposes these tools via MCP protocol:
-
-### Browser Tools
-| Tool | Description |
-|:--|:--|
-| `browser_navigate` | Navigate to a URL |
-| `browser_click` | Click an element by selector |
-| `browser_type` | Type text into an input |
-| `browser_extract` | Extract text/data from page |
-| `browser_screenshot` | Capture page screenshot |
-| `browser_fill_form` | Fill form fields from JSON |
-
-### Shell Tools
-| Tool | Description |
-|:--|:--|
-| `run_shell` | Execute a shell command |
-| `run_script` | Execute a script file |
-
-### File Tools
-| Tool | Description |
-|:--|:--|
-| `file_read` | Read file contents |
-| `file_write` | Write content to file |
-| `file_search` | Search for files by pattern |
-| `file_list` | List directory contents |
-
-### Screen Tools (Phase 3)
-| Tool | Description |
-|:--|:--|
-| `screen_capture` | Capture screen region |
-| `input_click` | Click at coordinates |
-| `input_type` | Type text via keyboard |
-| `input_key` | Press key combination |
+| Setting | Default | Description |
+|:--|:--|:--|
+| `FENRIR_PORT` | `8200` | MCP server port |
+| `OPENEMR_URL` | `http://localhost:80` | OpenEMR base URL |
+| `OPENEMR_FHIR_URL` | `http://localhost:80/apis/default/fhir` | FHIR R4 endpoint |
+| `HEIMDALL_URL` | `http://localhost:8080` | LLM Gateway |
+| `BROWSER_HEADLESS` | `true` | Run browser in headless mode |
 
 ---
 
-## Use Cases
+## 🗺️ Roadmap
 
-| Use Case | Tools Used |
-|:--|:--|
-| **Web data extraction** | `browser_navigate` → `browser_extract` |
-| **Patient record creation** | `browser_navigate` → `browser_fill_form` → `browser_click` |
-| **Ragnarok Online automation** | `screen_capture` → `input_click` → `input_key` |
-| **System administration** | `run_shell` → `file_read` → `file_write` |
-
----
-
-## Configuration
-
-```bash
-# ─── Fenrir Server ───────────────────────────────────────
-FENRIR_HOST=127.0.0.1       # Local only by default
-FENRIR_PORT=8200
-FENRIR_LOG_LEVEL=info
-
-# ─── Heimdall (LLM) ─────────────────────────────────────
-HEIMDALL_BASE_URL=http://localhost:8080/v1/
-HEIMDALL_API_KEY=your-key
-
-# ─── Security ───────────────────────────────────────────
-ALLOWED_DOMAINS=*.megacare.co,localhost,*.github.com
-ALLOWED_SHELL_COMMANDS=ls,cat,grep,find,curl,python3
-WORKSPACE_DIR=/Users/mimir/workspace
-SANDBOX_ENABLED=true
-
-# ─── Browser ────────────────────────────────────────────
-BROWSER_HEADLESS=true
-BROWSER_TIMEOUT=30
-```
+- [ ] Project scaffold (FastAPI + MCP Server)
+- [ ] FHIR R4 client for OpenEMR (Patient CRUD)
+- [ ] Browser Use integration (natural language → browser actions)
+- [ ] MCP tool definitions (browser_navigate, form_fill, fhir_create_patient, etc.)
+- [ ] OpenEMR form mapping (encounter, vitals, prescriptions)
+- [ ] Integration testing with Bifrost
 
 ---
 
-## Quick Start
+## 📚 Related
 
-```bash
-git clone https://github.com/megacare-dev/Fenrir.git
-cd Fenrir
-cargo build --release
-cp .env.example .env
-./target/release/fenrir
-```
-
----
-
-## Roadmap
-
-### Phase 1: Foundation
-- [ ] Fork ZeroClaw base
-- [ ] Configure Heimdall as LLM provider
-- [ ] MCP server interface
-- [ ] Basic tools: shell, file, web fetch
-
-### Phase 2: Browser Control
-- [ ] Playwright/Chromium integration
-- [ ] Navigate, extract, screenshot
-- [ ] Form filling automation
-- [ ] Cookie/session management
-
-### Phase 3: Screen & Input Control
-- [ ] macOS Accessibility API
-- [ ] Screen capture (CGWindowListCreateImage)
-- [ ] Keyboard/mouse simulation (CGEvent)
-- [ ] Game automation support
+- [Asgard AI Platform](https://github.com/megacare-dev/Asgard) — Ecosystem overview
+- [Heimdall](https://github.com/megacare-dev/Heimdall) — LLM Gateway
+- [Mimir](https://github.com/megacare-dev/Mimir) — RAG + Agent Builder
+- [Bifrost](https://github.com/megacare-dev/Bifrost) — Agent Runtime
+- [Browser Use](https://github.com/browser-use/browser-use) — Browser automation framework
+- [OpenEMR](https://www.open-emr.org/) — Open-source clinic management
 
 ---
 
-## Security
+## 📄 License
 
-Fenrir runs with **strict security by default**:
+**AGPL-3.0** — See [LICENSE](LICENSE)
 
-- 🔒 **Localhost-only binding** — not exposed to network
-- 🔒 **Domain allowlist** — browser can only visit approved domains
-- 🔒 **Command allowlist** — only whitelisted shell commands
-- 🔒 **Workspace scoping** — file access restricted to defined directories
-- 🔒 **Sandbox mode** — all operations run in constrained environment
-
----
-
-<p align="center">
-  <strong>🐺 Fenrir</strong> — Part of the <a href="https://github.com/megacare-dev/Asgard">🏰 Asgard AI Platform</a>
-  <br/>
-  <em>The great wolf that does the heavy lifting.</em>
-</p>
+© 2026 MegaWiz
