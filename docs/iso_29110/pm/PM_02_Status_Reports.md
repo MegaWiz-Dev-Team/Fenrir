@@ -9,6 +9,7 @@
 | Sprint | Period | Status | Tests | Key Deliverables |
 |:--|:--|:--|:--|:--|
 | Sprint 1 | 2026-03-12 | ✅ Completed | 35 | MCP Server, FHIR Client, Browser Agent, Task Router |
+| Sprint 2 | 2026-03-13 | ✅ Completed | — | Docker Build & Compose Integration |
 
 ---
 
