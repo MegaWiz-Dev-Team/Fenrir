@@ -1,5 +1,19 @@
 # Release Notes — Fenrir
 
+## v0.2.0 — Docker & Compose (2026-03-13)
+
+### 🐳 Infrastructure
+- Dockerfile rewritten: single-stage build, hatchling compatibility
+- `.dockerignore` added (includes README.md for hatchling)
+- Integrated into Asgard unified Docker Compose (:8200)
+- Health endpoint operational at `/health`
+
+### 📊 Stats
+- **35 tests**, all passing
+- Sprint 2 complete
+
+---
+
 ## v0.1.0 — Scaffold (2026-03-12)
 
 > Asgard เป็นของทุกคนแล้ว — Asgard belongs to everyone.
