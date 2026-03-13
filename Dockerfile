@@ -1,13 +1,17 @@
-FROM python:3.11-slim AS builder
-WORKDIR /app
-COPY pyproject.toml .
-RUN pip install --no-cache-dir .
-
+# 🐺 Fenrir — Computer-Use Agent
 FROM python:3.11-slim
+
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl && rm -rf /var/lib/apt/lists/*
+
 COPY . .
+RUN pip install --no-cache-dir -e .
 
 EXPOSE 8200
+
+HEALTHCHECK --interval=10s --timeout=3s --retries=3 \
+    CMD curl -f http://localhost:8200/healthz || exit 1
+
 CMD ["uvicorn", "fenrir.main:app", "--host", "0.0.0.0", "--port", "8200"]
