@@ -1,16 +1,32 @@
 """Tests for fenrir.api.mcp — MCP JSON-RPC 2.0 endpoint."""
 
 import pytest
+from unittest.mock import patch
 from httpx import ASGITransport, AsyncClient
 
-from fenrir.main import app
 from fenrir.api.mcp import TOOL_DEFINITIONS, JsonRpcRequest, JsonRpcResponse
 
 
 @pytest.fixture
 def client():
-    transport = ASGITransport(app=app)
-    return AsyncClient(transport=transport, base_url="http://test")
+    with patch("fenrir.config.settings") as mock_settings:
+        mock_settings.fenrir_host = "127.0.0.1"
+        mock_settings.fenrir_port = 8200
+        mock_settings.log_level = "WARNING"
+        mock_settings.openemr_url = "http://localhost:80"
+        mock_settings.openemr_fhir_url = "http://localhost:80/apis/default/fhir"
+        mock_settings.openemr_auth_token = ""
+        mock_settings.heimdall_url = "http://localhost:8080"
+        mock_settings.browser_headless = True
+        mock_settings.message_enabled = False
+        mock_settings.auth_enabled = False
+        mock_settings.zitadel_issuer = ""
+        mock_settings.jwt_audience = ""
+
+        from fenrir.main import create_app
+        test_app = create_app()
+        transport = ASGITransport(app=test_app)
+        yield AsyncClient(transport=transport, base_url="http://test")
 
 
 class TestMCP:

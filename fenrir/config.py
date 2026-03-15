@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     fenrir_username: str = "fenrir-ai"
     message_enabled: bool = False  # Feature flag
 
+    # Authentication (Yggdrasil + Zitadel)
+    auth_enabled: bool = True
+    zitadel_issuer: str = "http://localhost:8085"
+    jwt_audience: str = ""
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

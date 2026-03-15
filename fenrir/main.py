@@ -59,6 +59,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # JWT Auth (Yggdrasil + Zitadel)
+    from fenrir.middleware.auth import JWTAuthMiddleware
+    app.add_middleware(JWTAuthMiddleware)
+
     # Routers
     from fenrir.api.health import router as health_router
     from fenrir.api.mcp import router as mcp_router

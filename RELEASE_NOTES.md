@@ -1,5 +1,25 @@
 # Release Notes — Fenrir
 
+## v0.3.0 — JWT Auth + Message Center (2026-03-15)
+
+### 🔒 Security
+- **JWT Auth Middleware** via Yggdrasil — Zitadel-issued token validation
+- Public paths: `/healthz`, `/readyz`, `/docs`
+- `AUTH_ENABLED=false` dev bypass
+- Depends on: `yggdrasil>=0.1.0`, `PyJWT>=2.0`
+
+### 💬 OpenEMR Message Center
+- Message poller: polls OpenEMR inbox for new messages
+- Bifrost forwarding: AI processes messages and replies
+- OAuth2 token refresh for OpenEMR API
+- Feature flag: `MESSAGE_ENABLED=true`
+
+### 📊 Stats
+- **63 tests**, all passing (0.24s)
+- Sprint 3 complete (ISO 29110 PM-02-04)
+
+---
+
 ## v0.2.0 — Docker & Compose (2026-03-13)
 
 ### 🐳 Infrastructure
