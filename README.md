@@ -2,7 +2,7 @@
 
 > *The great wolf — AI-powered browser automation and clinic system integration for the Asgard ecosystem*
 
-**Fenrir** is the computer-use component of the [Asgard AI Platform](https://github.com/megacare-dev/Asgard). It takes natural language commands and executes browser automation tasks, with a primary focus on **Eir (OpenEMR)** clinic management integration.
+**Fenrir** is the computer-use component of the [Asgard AI Platform](https://github.com/MegaWiz-Dev-Team/Asgard). It takes natural language commands and executes browser automation tasks, with a primary focus on **Eir (OpenEMR)** clinic management integration.
 
 ---
 
@@ -134,10 +134,10 @@ graph TB
 
 ## 📚 Related
 
-- [Asgard AI Platform](https://github.com/megacare-dev/Asgard) — Ecosystem overview
-- [Heimdall](https://github.com/megacare-dev/Heimdall) — LLM Gateway
-- [Mimir](https://github.com/megacare-dev/Mimir) — RAG + Agent Builder
-- [Bifrost](https://github.com/megacare-dev/Bifrost) — Agent Runtime
+- [Asgard AI Platform](https://github.com/MegaWiz-Dev-Team/Asgard) — Ecosystem overview
+- [Heimdall](https://github.com/MegaWiz-Dev-Team/Heimdall) — LLM Gateway
+- [Mimir](https://github.com/MegaWiz-Dev-Team/Mimir) — RAG + Agent Builder
+- [Bifrost](https://github.com/MegaWiz-Dev-Team/Bifrost) — Agent Runtime
 - [Browser Use](https://github.com/browser-use/browser-use) — Browser automation framework
 - [OpenEMR](https://www.open-emr.org/) — Open-source clinic management
 
