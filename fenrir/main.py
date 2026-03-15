@@ -59,7 +59,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # JWT Auth (Yggdrasil + Zitadel)
+    # JWT Auth (Yggdrasil)
     from fenrir.middleware.auth import JWTAuthMiddleware
     app.add_middleware(JWTAuthMiddleware)
 

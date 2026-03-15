@@ -20,7 +20,7 @@ def client():
         mock_settings.browser_headless = True
         mock_settings.message_enabled = False
         mock_settings.auth_enabled = False
-        mock_settings.zitadel_issuer = ""
+        mock_settings.yggdrasil_issuer = ""
         mock_settings.jwt_audience = ""
 
         from fenrir.main import create_app

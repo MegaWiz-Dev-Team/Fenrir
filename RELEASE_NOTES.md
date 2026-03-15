@@ -3,7 +3,7 @@
 ## v0.3.0 — JWT Auth + Message Center (2026-03-15)
 
 ### 🔒 Security
-- **JWT Auth Middleware** via Yggdrasil — Zitadel-issued token validation
+- **JWT Auth Middleware** via Yggdrasil — Yggdrasil-issued token validation
 - Public paths: `/healthz`, `/readyz`, `/docs`
 - `AUTH_ENABLED=false` dev bypass
 - Depends on: `yggdrasil>=0.1.0`, `PyJWT>=2.0`

@@ -7,7 +7,7 @@
 ---
 
 ## Sprint Goal
-Add JWT authentication middleware using Yggdrasil SDK to protect Fenrir's MCP and API endpoints with Zitadel-issued JWT validation.
+Add JWT authentication middleware using Yggdrasil SDK to protect Fenrir's MCP and API endpoints with Yggdrasil JWT validation.
 
 ## Deliverables
 
@@ -16,7 +16,7 @@ Add JWT authentication middleware using Yggdrasil SDK to protect Fenrir's MCP an
 | `JWTAuthMiddleware` — Starlette middleware | ✅ Done | `fenrir/middleware/auth.py` |
 | Public paths exclusion (health, docs) | ✅ Done | `fenrir/middleware/auth.py` |
 | `auth_enabled` dev bypass (reads settings at request time) | ✅ Done | `fenrir/middleware/auth.py` |
-| Auth config (auth_enabled, zitadel_issuer, jwt_audience) | ✅ Done | `fenrir/config.py` |
+| Auth config (auth_enabled, yggdrasil_issuer, jwt_audience) | ✅ Done | `fenrir/config.py` |
 | Middleware registration in `create_app()` factory | ✅ Done | `fenrir/main.py` |
 | 8 TDD auth tests (written before implementation) | ✅ Done | `tests/test_auth.py` |
 | Existing MCP test fixture updated (auth_enabled=False) | ✅ Done | `tests/test_mcp.py` |
