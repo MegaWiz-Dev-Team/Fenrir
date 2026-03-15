@@ -10,13 +10,15 @@
 
 ```mermaid
 graph TB
-    subgraph input["📩 Natural Language Input"]
+    subgraph input["📩 Input Channels"]
         Mimir["🧠 Mimir<br/>RAG + Agent"]
         Bifrost["⚡ Bifrost<br/>Agent Runtime"]
+        MsgCenter["💬 OpenEMR<br/>Message Center"]
     end
 
-    subgraph fenrir["🐺 Fenrir — MCP Server"]
+    subgraph fenrir["🐺 Fenrir — MCP Server + Message Poller"]
         Router["🔀 Task Router<br/>API-able? → FHIR<br/>UI-only? → Browser"]
+        Poller["📨 Message Poller<br/>Poll → Bifrost → Reply"]
         FHIR["🏥 FHIR R4 Client<br/>Patient · Encounter · Observation"]
         BrowserUse["🌐 Browser Use<br/>Playwright + LLM"]
     end
@@ -28,11 +30,14 @@ graph TB
 
     Mimir --> Bifrost
     Bifrost --> |"MCP"| Router
+    MsgCenter --> |"poll"| Poller
+    Poller --> |"invoke"| Bifrost
     Router --> FHIR
     Router --> BrowserUse
     FHIR --> OpenEMR
     BrowserUse --> OpenEMR
     BrowserUse --> WebApps
+    Poller --> |"reply"| OpenEMR
 
     style fenrir fill:#1c1917,stroke:#a8a29e,color:#e7e5e4
     style input fill:transparent,stroke:#94a3b8
@@ -49,6 +54,7 @@ graph TB
 | **Browser Automation** | [Browser Use](https://github.com/browser-use/browser-use) | Natural language → browser actions |
 | **Browser Engine** | Playwright | Headless/headed browser control |
 | **API Integration** | FHIR R4 Client (`fhirclient`) | Direct OpenEMR data operations |
+| **Message Poller** | asyncio + httpx | Poll OpenEMR Message Center, relay to Bifrost |
 | **LLM Backend** | Heimdall Gateway | Local LLM inference (Ollama/MLX) |
 
 ---
@@ -64,6 +70,14 @@ graph TB
 | Create encounter | **FHIR API** | "สร้าง visit ใหม่สำหรับ HN 12345" |
 | Fill complex forms | **Browser Use** | "กรอกแบบฟอร์มส่งตัวผู้ป่วย" |
 | Generate reports | **Browser Use** | "พิมพ์ใบสรุปการรักษา" |
+
+### OpenEMR Messaging (AI Assistant)
+
+| Task | Method | Example |
+|:--|:--|:--|
+| Chat with AI | **Message Center** | ส่งข้อความถึง `fenrir-ai` ใน OpenEMR |
+| Get patient info | **Message → Bifrost** | "ขอดูข้อมูลคนไข้ HN 12345" |
+| Ask clinical Q | **Message → Bifrost** | "ยา Metformin ควรให้ dose เท่าไหร่" |
 
 ### General Browser Automation
 
@@ -97,16 +111,23 @@ graph TB
 | `OPENEMR_FHIR_URL` | `http://localhost:80/apis/default/fhir` | FHIR R4 endpoint |
 | `HEIMDALL_URL` | `http://localhost:8080` | LLM Gateway |
 | `BROWSER_HEADLESS` | `true` | Run browser in headless mode |
+| `MESSAGE_ENABLED` | `true` | Enable OpenEMR message polling |
+| `MESSAGE_POLL_INTERVAL` | `30` | Poll interval (seconds) |
+| `FENRIR_USERNAME` | `fenrir-ai` | OpenEMR AI user account |
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Project scaffold (FastAPI + MCP Server)
-- [ ] FHIR R4 client for OpenEMR (Patient CRUD)
-- [ ] Browser Use integration (natural language → browser actions)
-- [ ] MCP tool definitions (browser_navigate, form_fill, fhir_create_patient, etc.)
+- [x] Project scaffold (FastAPI + MCP Server)
+- [x] FHIR R4 client for OpenEMR (Patient CRUD)
+- [x] Browser Use integration (natural language → browser actions)
+- [x] MCP tool definitions (browser_navigate, form_fill, fhir_search_patient, etc.)
+- [x] OpenEMR Message Center integration (AI chat via messaging)
+- [x] Docker Compose integration
+- [ ] Browser Use + Heimdall LLM
 - [ ] OpenEMR form mapping (encounter, vitals, prescriptions)
+- [ ] Yggdrasil JWT auth
 - [ ] Integration testing with Bifrost
 
 ---

@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     # Browser Use
     browser_headless: bool = True
 
+    # OpenEMR Messaging (Message Center integration)
+    openemr_api_url: str = "http://localhost:80/apis/default/api"
+    openemr_client_id: str = ""
+    openemr_client_secret: str = ""
+    message_poll_interval: int = 15  # seconds
+    fenrir_username: str = "fenrir-ai"
+    message_enabled: bool = False  # Feature flag
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

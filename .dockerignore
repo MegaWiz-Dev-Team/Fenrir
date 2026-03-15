@@ -1,8 +1,22 @@
+# 🐺 Fenrir — Docker build exclusions
 .git/
+.venv/
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
 .env
+.env.example
 data/
 tests/
 docs/
 .pytest_cache/
+.coverage
+htmlcov/
+.gitignore
+LICENSE
+RELEASE_NOTES.md
+Dockerfile
+.dockerignore

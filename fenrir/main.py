@@ -24,7 +24,21 @@ async def lifespan(app: FastAPI):
     logger.info(f"  FHIR:     {settings.openemr_fhir_url}")
     logger.info(f"  Heimdall: {settings.heimdall_url}")
     logger.info(f"  Headless: {settings.browser_headless}")
+    logger.info(f"  Messages: {'enabled' if settings.message_enabled else 'disabled'}")
+
+    # Start message poller if enabled
+    poller = None
+    if settings.message_enabled:
+        from fenrir.openemr.message_poller import get_poller
+        poller = get_poller()
+        await poller.start()
+        logger.info(f"  Poller:   polling every {settings.message_poll_interval}s as '{settings.fenrir_username}'")
+
     yield
+
+    # Stop message poller
+    if poller:
+        await poller.stop()
     logger.info("Fenrir shutting down")
 
 
@@ -51,6 +65,19 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(mcp_router)
+
+    # Message poller status endpoint
+    from fastapi import APIRouter
+    from fenrir.openemr.message_poller import get_poller
+
+    msg_router = APIRouter(tags=["messages"])
+
+    @msg_router.get("/api/messages/status")
+    async def message_poller_status():
+        """Get the status of the OpenEMR message poller."""
+        return get_poller().status.model_dump()
+
+    app.include_router(msg_router)
 
     return app
 
