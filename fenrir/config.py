@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     # Heimdall LLM Gateway
     heimdall_url: str = "http://localhost:8080"
 
-    # Browser Use
+    # Browser / Ratatoskr
     browser_headless: bool = True
+    ratatoskr_url: str = "http://localhost:9200"
 
     # OpenEMR Messaging (Message Center integration)
     openemr_api_url: str = "http://localhost:80/apis/default/api"
@@ -29,6 +30,9 @@ class Settings(BaseSettings):
     message_poll_interval: int = 15  # seconds
     fenrir_username: str = "fenrir-ai"
     message_enabled: bool = False  # Feature flag
+
+    # Mimir Knowledge Base
+    mimir_url: str = "http://localhost:4200"
 
     # Authentication (Yggdrasil)
     auth_enabled: bool = True

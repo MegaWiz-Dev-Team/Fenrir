@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     init_db()
 
     logger.info(
-        f"Starting Fenrir v0.1.0 on {settings.fenrir_host}:{settings.fenrir_port}"
+        f"Starting Fenrir v0.2.0 on {settings.fenrir_host}:{settings.fenrir_port}"
     )
     logger.info(f"  OpenEMR:  {settings.openemr_url}")
     logger.info(f"  FHIR:     {settings.openemr_fhir_url}")
@@ -51,7 +51,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Fenrir — Computer-Use Agent",
-        version="0.1.0",
+        version="0.2.0",
         description="AI-powered browser automation and FHIR integration for the Asgard AI Platform.",
         lifespan=lifespan,
     )
@@ -73,11 +73,13 @@ def create_app() -> FastAPI:
     from fenrir.api.mcp import router as mcp_router
     from fenrir.api.test_results import router as test_results_router
     from fenrir.api.test_results import badge_router
+    from fenrir.api.workflows import router as workflows_router
 
     app.include_router(health_router)
     app.include_router(mcp_router)
     app.include_router(test_results_router)
     app.include_router(badge_router)
+    app.include_router(workflows_router)
 
     # Message poller status endpoint
     from fastapi import APIRouter
