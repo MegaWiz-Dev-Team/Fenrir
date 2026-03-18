@@ -17,6 +17,11 @@ async def lifespan(app: FastAPI):
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
     )
     logger = logging.getLogger("fenrir")
+
+    # Initialize test results DB
+    from fenrir.test_results.storage import init_db
+    init_db()
+
     logger.info(
         f"Starting Fenrir v0.1.0 on {settings.fenrir_host}:{settings.fenrir_port}"
     )
@@ -66,9 +71,13 @@ def create_app() -> FastAPI:
     # Routers
     from fenrir.api.health import router as health_router
     from fenrir.api.mcp import router as mcp_router
+    from fenrir.api.test_results import router as test_results_router
+    from fenrir.api.test_results import badge_router
 
     app.include_router(health_router)
     app.include_router(mcp_router)
+    app.include_router(test_results_router)
+    app.include_router(badge_router)
 
     # Message poller status endpoint
     from fastapi import APIRouter

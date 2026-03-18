@@ -1,21 +1,30 @@
-"""Browser Agent — Browser Use wrapper for browser automation.
+"""Browser Agent — Ratatoskr API wrapper for browser automation.
 
-Wraps the browser-use library to provide structured browser automation
-that can be called from MCP tool handlers.
+Wraps the shared Ratatoskr browser service to provide structured browser
+automation that can be called from MCP tool handlers.
 
 Security: Only allows navigation to localhost URLs by default.
+
+Migration: Replaced direct Playwright usage with Ratatoskr HTTP API
+to centralize browser instances and reduce RAM usage.
 """
 
 import logging
+import os
 from urllib.parse import urlparse
 
+import httpx
+
 logger = logging.getLogger("fenrir.browser")
+
+RATATOSKR_URL = os.getenv("RATATOSKR_URL", "http://ratatoskr:9200")
 
 # Allowed URL patterns for security (patient data must stay local)
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "0.0.0.0",
+    "host.docker.internal",
 ]
 
 
@@ -30,44 +39,44 @@ def is_allowed_url(url: str) -> bool:
 
 
 class BrowserAgent:
-    """Browser automation agent wrapping Browser Use.
+    """Browser automation agent wrapping Ratatoskr.
 
     Provides structured methods for browser interaction while enforcing
     security constraints (localhost-only navigation).
+    All browser operations go through the shared Ratatoskr service.
     """
 
     def __init__(self, headless: bool = True, heimdall_url: str = ""):
         self.headless = headless
         self.heimdall_url = heimdall_url
-        self._browser = None
+        self.ratatoskr_url = RATATOSKR_URL
 
     async def navigate(self, url: str) -> str:
         """Navigate to a URL and return page title + content summary.
 
         Only allows localhost URLs for security.
+        Uses Ratatoskr /api/v1/scrape for JS-rendered content.
         """
         if not is_allowed_url(url):
             return f"BLOCKED: URL '{url}' is not allowed. Only localhost URLs are permitted for security."
 
-        logger.info(f"Browser navigate: {url} (headless={self.headless})")
+        logger.info(f"Browser navigate via Ratatoskr: {url}")
 
         try:
-            from playwright.async_api import async_playwright
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{self.ratatoskr_url}/api/v1/scrape",
+                    json={"url": url, "extract_text": True},
+                )
+                resp.raise_for_status()
+                data = resp.json()
 
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=self.headless)
-                page = await browser.new_page()
-                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-
-                title = await page.title()
-                # Get first 2000 chars of text content
-                content = await page.evaluate("document.body?.innerText?.substring(0, 2000) || ''")
-
-                await browser.close()
+                title = data.get("title", "")
+                content = (data.get("text", "") or "")[:2000]
 
                 return f"Title: {title}\n\nContent:\n{content}"
-        except ImportError:
-            return "ERROR: Playwright not installed. Run: playwright install chromium"
+        except httpx.ConnectError:
+            return "ERROR: Ratatoskr not available. Ensure the service is running."
         except Exception as e:
             logger.error(f"Browser navigate error: {e}")
             return f"ERROR: Navigation failed: {e}"
@@ -79,10 +88,14 @@ class BrowserAgent:
         Future: maintain persistent browser context.
         """
         logger.info(f"Browser extract: {selector}")
-        return f"Extract requires an active page. Use browser_navigate first, then extract."
+        return "Extract requires an active page. Use browser_navigate first, then extract."
 
     async def fill_form(self, url: str, fields: dict[str, str]) -> str:
         """Fill a form on a page.
+
+        NOTE: Form filling requires direct browser control.
+        Falls back to Ratatoskr scrape to verify the page is reachable,
+        but actual form filling requires Playwright on the Ratatoskr side.
 
         Args:
             url: Page URL to navigate to
@@ -91,46 +104,48 @@ class BrowserAgent:
         if not is_allowed_url(url):
             return f"BLOCKED: URL '{url}' is not allowed."
 
-        logger.info(f"Browser fill_form: {url} ({len(fields)} fields)")
+        logger.info(f"Browser fill_form via Ratatoskr: {url} ({len(fields)} fields)")
 
         try:
-            from playwright.async_api import async_playwright
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                # Verify page is reachable
+                resp = await client.post(
+                    f"{self.ratatoskr_url}/api/v1/scrape",
+                    json={"url": url, "extract_text": True},
+                )
+                resp.raise_for_status()
 
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=self.headless)
-                page = await browser.new_page()
-                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-
-                filled = []
-                for selector, value in fields.items():
-                    try:
-                        await page.fill(selector, value)
-                        filled.append(selector)
-                    except Exception as e:
-                        logger.warning(f"Failed to fill {selector}: {e}")
-
-                await browser.close()
-
-                return f"Filled {len(filled)}/{len(fields)} fields: {filled}"
-        except ImportError:
-            return "ERROR: Playwright not installed."
+                # TODO: Implement form-filling via Ratatoskr /api/v1/interact endpoint
+                # For now, report the page is reachable and fields are ready
+                return (
+                    f"Page '{url}' loaded successfully. "
+                    f"Form fill of {len(fields)} fields pending Ratatoskr interact API. "
+                    f"Fields: {list(fields.keys())}"
+                )
+        except httpx.ConnectError:
+            return "ERROR: Ratatoskr not available."
         except Exception as e:
             return f"ERROR: Form fill failed: {e}"
 
     async def screenshot(self, url: str, path: str = "/tmp/fenrir_screenshot.png") -> str:
-        """Take a screenshot of a page."""
+        """Take a screenshot of a page via Ratatoskr."""
         if not is_allowed_url(url):
             return f"BLOCKED: URL '{url}' is not allowed."
 
         try:
-            from playwright.async_api import async_playwright
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{self.ratatoskr_url}/api/v1/screenshot",
+                    json={"url": url},
+                )
+                resp.raise_for_status()
 
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                page = await browser.new_page()
-                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
-                await page.screenshot(path=path)
-                await browser.close()
+                # Save screenshot to file
+                with open(path, "wb") as f:
+                    f.write(resp.content)
+
                 return f"Screenshot saved: {path}"
+        except httpx.ConnectError:
+            return "ERROR: Ratatoskr not available."
         except Exception as e:
             return f"ERROR: Screenshot failed: {e}"

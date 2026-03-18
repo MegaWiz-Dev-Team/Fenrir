@@ -25,6 +25,8 @@ PUBLIC_PATHS = frozenset({
 PUBLIC_PREFIXES = (
     "/docs",
     "/redoc",
+    "/api/badges",           # Coverage badges for README embedding
+    "/api/test-results",     # Service-to-service test result ingestion
 )
 
 
