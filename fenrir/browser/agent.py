@@ -91,11 +91,7 @@ class BrowserAgent:
         return "Extract requires an active page. Use browser_navigate first, then extract."
 
     async def fill_form(self, url: str, fields: dict[str, str]) -> str:
-        """Fill a form on a page.
-
-        NOTE: Form filling requires direct browser control.
-        Falls back to Ratatoskr scrape to verify the page is reachable,
-        but actual form filling requires Playwright on the Ratatoskr side.
+        """Fill a form on a page via Ratatoskr /api/v1/interact.
 
         Args:
             url: Page URL to navigate to
@@ -107,21 +103,24 @@ class BrowserAgent:
         logger.info(f"Browser fill_form via Ratatoskr: {url} ({len(fields)} fields)")
 
         try:
+            # Build action chain: fill each field
+            actions = [{"type": "fill", "selector": sel, "value": val} for sel, val in fields.items()]
+
             async with httpx.AsyncClient(timeout=30.0) as client:
-                # Verify page is reachable
                 resp = await client.post(
-                    f"{self.ratatoskr_url}/api/v1/scrape",
-                    json={"url": url, "extract_text": True},
+                    f"{self.ratatoskr_url}/api/v1/interact",
+                    json={"url": url, "actions": actions},
                 )
                 resp.raise_for_status()
+                data = resp.json()
 
-                # TODO: Implement form-filling via Ratatoskr /api/v1/interact endpoint
-                # For now, report the page is reachable and fields are ready
-                return (
-                    f"Page '{url}' loaded successfully. "
-                    f"Form fill of {len(fields)} fields pending Ratatoskr interact API. "
-                    f"Fields: {list(fields.keys())}"
-                )
+                completed = data.get("actions_completed", 0)
+                total = data.get("actions_total", 0)
+                error = data.get("error")
+
+                if error:
+                    return f"Filled {completed}/{total} fields. Error: {error}"
+                return f"Filled {completed}/{total} fields successfully: {list(fields.keys())}"
         except httpx.ConnectError:
             return "ERROR: Ratatoskr not available."
         except Exception as e:
