@@ -95,6 +95,29 @@ TOOL_DEFINITIONS: list[dict] = [
             "required": ["family_name", "given_name"],
         },
     },
+    {
+        "name": "run_e2e",
+        "description": "Trigger a Forseti E2E test suite by project name. Returns run results summary.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "Forseti project name (e.g. 'eir-gateway')"},
+                "suite": {"type": "string", "description": "Optional YAML test suite filename (e.g. 'eir_gateway_e2e.yaml')"},
+            },
+            "required": ["project"],
+        },
+    },
+    {
+        "name": "get_test_results",
+        "description": "Retrieve recent E2E test results from the Forseti dashboard.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "project": {"type": "string", "description": "Filter by project name"},
+                "limit": {"type": "integer", "description": "Max number of results (default: 10)", "default": 10},
+            },
+        },
+    },
 ]
 
 
@@ -155,6 +178,30 @@ async def handle_tools_call(params: dict) -> dict:
         agent = BrowserAgent(headless=settings.browser_headless)
         result = await agent.extract(arguments["selector"])
         return {"content": [{"type": "text", "text": result}]}
+
+    elif tool_name == "run_e2e":
+        import httpx
+        forseti_url = settings.forseti_url if hasattr(settings, "forseti_url") else "http://forseti:5555"
+        project = arguments.get("project", "")
+        suite = arguments.get("suite", "")
+        payload = {"project": project}
+        if suite:
+            payload["suite"] = suite
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            resp = await client.post(f"{forseti_url}/api/run", json=payload)
+        return {"content": [{"type": "text", "text": resp.text}]}
+
+    elif tool_name == "get_test_results":
+        import httpx
+        forseti_url = settings.forseti_url if hasattr(settings, "forseti_url") else "http://forseti:5555"
+        project = arguments.get("project", "")
+        limit = arguments.get("limit", 10)
+        params = {"limit": limit}
+        if project:
+            params["project"] = project
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{forseti_url}/api/results", params=params)
+        return {"content": [{"type": "text", "text": resp.text}]}
 
     else:
         return {"content": [{"type": "text", "text": f"Unknown tool: {tool_name}"}]}

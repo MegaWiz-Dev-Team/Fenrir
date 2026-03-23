@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     # Mimir Knowledge Base
     mimir_url: str = "http://localhost:4200"
 
+    # Forseti E2E Dashboard
+    forseti_url: str = "http://forseti:5555"
+
     # Authentication (Yggdrasil)
     auth_enabled: bool = True
     yggdrasil_issuer: str = "http://localhost:8085"
