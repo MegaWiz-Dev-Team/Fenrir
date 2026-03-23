@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl && rm -rf /var/lib/apt/lists/*
 
 COPY . .
-RUN pip install --no-cache-dir -e . \
+RUN pip install --no-cache-dir -e . playwright \
     && playwright install --with-deps chromium
 
 EXPOSE 8200

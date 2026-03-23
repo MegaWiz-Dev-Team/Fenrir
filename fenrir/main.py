@@ -70,13 +70,13 @@ def create_app() -> FastAPI:
 
     # Routers
     from fenrir.api.health import router as health_router
-    from fenrir.api.mcp import router as mcp_router
+    from fenrir.api.mcp import mcp_server
     from fenrir.api.test_results import router as test_results_router
     from fenrir.api.test_results import badge_router
     from fenrir.api.workflows import router as workflows_router
 
     app.include_router(health_router)
-    app.include_router(mcp_router)
+    app.mount("/mcp", mcp_server.sse_app())
     app.include_router(test_results_router)
     app.include_router(badge_router)
     app.include_router(workflows_router)

@@ -1,246 +1,98 @@
-"""MCP Server — JSON-RPC 2.0 endpoint for Bifrost integration.
+"""MCP Server — Official Anthropic SDK implementation.
 
-Implements the Model Context Protocol (MCP) server interface so Bifrost
-can discover and call Fenrir's tools via stdio or SSE transport.
+Implements the Model Context Protocol (MCP) using FastMCP
+so Bifrost can discover and call Fenrir's tools via SSE transport.
 """
 
 import logging
-from typing import Any
+from typing import Optional, Any
 
-from fastapi import APIRouter
+from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
 logger = logging.getLogger("fenrir.mcp")
 
-router = APIRouter(tags=["mcp"])
+mcp_server = FastMCP("fenrir")
 
 
-# === JSON-RPC Models ===
-
-class JsonRpcRequest(BaseModel):
-    """JSON-RPC 2.0 request."""
-    jsonrpc: str = "2.0"
-    id: int | str | None = None
-    method: str
-    params: dict[str, Any] = {}
-
-
-class JsonRpcResponse(BaseModel):
-    """JSON-RPC 2.0 response."""
-    jsonrpc: str = "2.0"
-    id: int | str | None = None
-    result: dict[str, Any] | None = None
-    error: dict[str, Any] | None = None
-
-
-# === Tool Definitions ===
-
-TOOL_DEFINITIONS: list[dict] = [
-    {
-        "name": "browser_navigate",
-        "description": "Navigate the browser to a URL and return the page content.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "url": {"type": "string", "description": "URL to navigate to"},
-            },
-            "required": ["url"],
-        },
-    },
-    {
-        "name": "browser_extract",
-        "description": "Extract text content from the current page using a CSS selector.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "selector": {"type": "string", "description": "CSS selector to extract from"},
-            },
-            "required": ["selector"],
-        },
-    },
-    {
-        "name": "fhir_search_patient",
-        "description": "Search for patients in OpenEMR by name, birthdate, or identifier.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string", "description": "Patient name (partial match)"},
-                "birthdate": {"type": "string", "description": "Date of birth (YYYY-MM-DD)"},
-                "identifier": {"type": "string", "description": "Patient identifier / MRN"},
-            },
-        },
-    },
-    {
-        "name": "fhir_get_patient",
-        "description": "Get a specific patient record from OpenEMR by ID.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "patient_id": {"type": "string", "description": "FHIR Patient resource ID"},
-            },
-            "required": ["patient_id"],
-        },
-    },
-    {
-        "name": "fhir_create_patient",
-        "description": "Create a new patient record in OpenEMR.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "family_name": {"type": "string", "description": "Patient family/last name"},
-                "given_name": {"type": "string", "description": "Patient given/first name"},
-                "birthdate": {"type": "string", "description": "Date of birth (YYYY-MM-DD)"},
-                "gender": {"type": "string", "enum": ["male", "female", "other", "unknown"]},
-            },
-            "required": ["family_name", "given_name"],
-        },
-    },
-    {
-        "name": "run_e2e",
-        "description": "Trigger a Forseti E2E test suite by project name. Returns run results summary.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "project": {"type": "string", "description": "Forseti project name (e.g. 'eir-gateway')"},
-                "suite": {"type": "string", "description": "Optional YAML test suite filename (e.g. 'eir_gateway_e2e.yaml')"},
-            },
-            "required": ["project"],
-        },
-    },
-    {
-        "name": "get_test_results",
-        "description": "Retrieve recent E2E test results from the Forseti dashboard.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "project": {"type": "string", "description": "Filter by project name"},
-                "limit": {"type": "integer", "description": "Max number of results (default: 10)", "default": 10},
-            },
-        },
-    },
-]
-
-
-# === JSON-RPC Dispatch ===
-
-async def handle_initialize(params: dict) -> dict:
-    """Handle MCP initialize request."""
-    return {
-        "protocolVersion": "2024-11-05",
-        "capabilities": {
-            "tools": {"listChanged": False},
-        },
-        "serverInfo": {
-            "name": "fenrir",
-            "version": "0.1.0",
-        },
-    }
-
-
-async def handle_tools_list(params: dict) -> dict:
-    """Handle tools/list — return available tool definitions."""
-    return {"tools": TOOL_DEFINITIONS}
-
-
-async def handle_tools_call(params: dict) -> dict:
-    """Handle tools/call — dispatch to appropriate tool handler."""
-    tool_name = params.get("name", "")
-    arguments = params.get("arguments", {})
-
-    logger.info(f"MCP tool call: {tool_name} with {arguments}")
-
-    # Import handlers lazily to avoid circular deps
-    from fenrir.fhir.client import FHIRClient
+@mcp_server.tool()
+async def browser_navigate(url: str) -> str:
+    """Navigate the browser to a URL and return the page content."""
     from fenrir.browser.agent import BrowserAgent
     from fenrir.config import settings
-
-    if tool_name == "fhir_search_patient":
-        client = FHIRClient(settings.openemr_fhir_url, settings.openemr_auth_token)
-        result = await client.search_patient(**arguments)
-        return {"content": [{"type": "text", "text": str(result)}]}
-
-    elif tool_name == "fhir_get_patient":
-        client = FHIRClient(settings.openemr_fhir_url, settings.openemr_auth_token)
-        result = await client.get_patient(arguments["patient_id"])
-        return {"content": [{"type": "text", "text": str(result)}]}
-
-    elif tool_name == "fhir_create_patient":
-        client = FHIRClient(settings.openemr_fhir_url, settings.openemr_auth_token)
-        result = await client.create_patient(**arguments)
-        return {"content": [{"type": "text", "text": str(result)}]}
-
-    elif tool_name == "browser_navigate":
-        agent = BrowserAgent(headless=settings.browser_headless)
-        result = await agent.navigate(arguments["url"])
-        return {"content": [{"type": "text", "text": result}]}
-
-    elif tool_name == "browser_extract":
-        agent = BrowserAgent(headless=settings.browser_headless)
-        result = await agent.extract(arguments["selector"])
-        return {"content": [{"type": "text", "text": result}]}
-
-    elif tool_name == "run_e2e":
-        import httpx
-        forseti_url = settings.forseti_url if hasattr(settings, "forseti_url") else "http://forseti:5555"
-        project = arguments.get("project", "")
-        suite = arguments.get("suite", "")
-        payload = {"project": project}
-        if suite:
-            payload["suite"] = suite
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            resp = await client.post(f"{forseti_url}/api/run", json=payload)
-        return {"content": [{"type": "text", "text": resp.text}]}
-
-    elif tool_name == "get_test_results":
-        import httpx
-        forseti_url = settings.forseti_url if hasattr(settings, "forseti_url") else "http://forseti:5555"
-        project = arguments.get("project", "")
-        limit = arguments.get("limit", 10)
-        params = {"limit": limit}
-        if project:
-            params["project"] = project
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(f"{forseti_url}/api/results", params=params)
-        return {"content": [{"type": "text", "text": resp.text}]}
-
-    else:
-        return {"content": [{"type": "text", "text": f"Unknown tool: {tool_name}"}]}
+    logger.info(f"MCP tool call: browser_navigate with {url}")
+    agent = BrowserAgent(headless=settings.browser_headless)
+    return await agent.navigate(url)
 
 
-# Method dispatch table
-METHOD_HANDLERS = {
-    "initialize": handle_initialize,
-    "tools/list": handle_tools_list,
-    "tools/call": handle_tools_call,
-}
+@mcp_server.tool()
+async def browser_extract(selector: str) -> str:
+    """Extract text content from the current page using a CSS selector."""
+    from fenrir.browser.agent import BrowserAgent
+    from fenrir.config import settings
+    logger.info(f"MCP tool call: browser_extract with {selector}")
+    agent = BrowserAgent(headless=settings.browser_headless)
+    return await agent.extract(selector)
 
 
-@router.post("/mcp")
-async def mcp_endpoint(request: JsonRpcRequest) -> JsonRpcResponse:
-    """JSON-RPC 2.0 MCP endpoint.
+@mcp_server.tool()
+async def fhir_search_patient(name: Optional[str] = None, birthdate: Optional[str] = None, identifier: Optional[str] = None) -> str:
+    """Search for patients in OpenEMR by name, birthdate, or identifier."""
+    from fenrir.fhir.client import FHIRClient
+    from fenrir.config import settings
+    logger.info(f"MCP tool call: fhir_search_patient")
+    client = FHIRClient(settings.openemr_fhir_url, settings.openemr_auth_token)
+    result = await client.search_patient(name=name, birthdate=birthdate, identifier=identifier)
+    return str(result)
 
-    Supports: initialize, tools/list, tools/call
-    """
-    handler = METHOD_HANDLERS.get(request.method)
 
-    if handler is None:
-        return JsonRpcResponse(
-            id=request.id,
-            error={
-                "code": -32601,
-                "message": f"Method not found: {request.method}",
-            },
-        )
+@mcp_server.tool()
+async def fhir_get_patient(patient_id: str) -> str:
+    """Get a specific patient record from OpenEMR by ID."""
+    from fenrir.fhir.client import FHIRClient
+    from fenrir.config import settings
+    logger.info(f"MCP tool call: fhir_get_patient with {patient_id}")
+    client = FHIRClient(settings.openemr_fhir_url, settings.openemr_auth_token)
+    result = await client.get_patient(patient_id)
+    return str(result)
 
-    try:
-        result = await handler(request.params)
-        return JsonRpcResponse(id=request.id, result=result)
-    except Exception as e:
-        logger.exception(f"MCP handler error: {request.method}")
-        return JsonRpcResponse(
-            id=request.id,
-            error={
-                "code": -32603,
-                "message": f"Internal error: {e}",
-            },
-        )
+
+@mcp_server.tool()
+async def fhir_create_patient(family_name: str, given_name: str, birthdate: Optional[str] = None, gender: Optional[str] = None) -> str:
+    """Create a new patient record in OpenEMR."""
+    from fenrir.fhir.client import FHIRClient
+    from fenrir.config import settings
+    logger.info(f"MCP tool call: fhir_create_patient with {family_name}")
+    client = FHIRClient(settings.openemr_fhir_url, settings.openemr_auth_token)
+    result = await client.create_patient(family_name=family_name, given_name=given_name, birthdate=birthdate, gender=gender)
+    return str(result)
+
+
+@mcp_server.tool()
+async def run_e2e(project: str, suite: Optional[str] = None) -> str:
+    """Trigger a Forseti E2E test suite by project name. Returns run results summary."""
+    import httpx
+    from fenrir.config import settings
+    logger.info(f"MCP tool call: run_e2e with {project}")
+    forseti_url = settings.forseti_url if hasattr(settings, "forseti_url") else "http://forseti:5555"
+    payload = {"project": project}
+    if suite:
+        payload["suite"] = suite
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        resp = await client.post(f"{forseti_url}/api/run", json=payload)
+    return resp.text
+
+
+@mcp_server.tool()
+async def get_test_results(project: Optional[str] = None, limit: int = 10) -> str:
+    """Retrieve recent E2E test results from the Forseti dashboard."""
+    import httpx
+    from fenrir.config import settings
+    logger.info(f"MCP tool call: get_test_results for {project}")
+    forseti_url = settings.forseti_url if hasattr(settings, "forseti_url") else "http://forseti:5555"
+    params: dict[str, Any] = {"limit": limit}
+    if project:
+        params["project"] = project
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(f"{forseti_url}/api/results", params=params)
+    return resp.text
