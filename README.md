@@ -4,6 +4,14 @@
 
 **Fenrir** is the computer-use component of the [Asgard AI Platform](https://github.com/MegaWiz-Dev-Team/Asgard). It takes natural language commands and executes browser automation tasks, with a primary focus on **Eir (OpenEMR)** clinic management integration.
 
+### 🏥 Role in Multi-Agent Ecosystem
+
+> **Computer Use Agent (ผู้ช่วยธุรการ)** — AI Agent ที่สั่ง Browser ด้วย LLM สำหรับงานที่ไม่มี API เช่น กรอก e-Claim, ส่ง Rezept ผ่าน Web Portal — ใช้ 🐿️ **Ratatoskr** เป็น Browser Engine ด้านล่าง
+>
+> **Security:** รันใน **Docker Sandbox** แยก Container ต่อ Task เพื่อป้องกันการเข้าถึง DB โดยตรง
+>
+> 📖 [Full Architecture →](https://github.com/MegaWiz-Dev-Team/Asgard/blob/main/docs/roadmap/MultiAgent_Architecture_Plan.md) | [Sprint Plan →](https://github.com/MegaWiz-Dev-Team/Asgard/blob/main/docs/roadmap/MultiAgent_Sprint_Plan.md)
+
 ---
 
 ## 🏗️ Architecture
