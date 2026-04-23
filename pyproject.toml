@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fenrir"
-version = "0.1.0"
+version = "0.2.0"
 description = "Computer-Use Agent for the Asgard AI Platform — Browser Use + FHIR R4"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
